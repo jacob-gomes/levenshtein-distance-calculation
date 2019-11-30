@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.distance.calculator.LevenshteinDistanceCalculator;
 
@@ -12,11 +14,7 @@ public class LevenshteinDistanceCalculatorImpl implements LevenshteinDistanceCal
 
 	@Override
 	public int levenshtein(String token1, String token2) {
-		int maxLength = 0;
-		if(null != token1 && null != token2) {
-			maxLength = Collections.max(Arrays.asList(token1.length(),token2.length()));
-		}
-		return levenshtein( token1,  token2, maxLength);
+		return levenshtein( token1,  token2, Integer.MAX_VALUE);
 	}
 
 	@Override
@@ -25,10 +23,12 @@ public class LevenshteinDistanceCalculatorImpl implements LevenshteinDistanceCal
 		int lengthOfToken2;
 		List<Integer> distances;
 		
+		//checking for identical string
 		if (token1 == token2) {
 			return 0;
 		}
 
+		//Making UTF-8 compatible
 		try {
 			byte[] utf8Bytes;
 			utf8Bytes = token1.getBytes("UTF-8");
@@ -67,39 +67,45 @@ public class LevenshteinDistanceCalculatorImpl implements LevenshteinDistanceCal
  
 		distances = new ArrayList<>(lengthOfToken2 + 1);
 		
-		for (int indexForToken1 = 1; indexForToken1 <= lengthOfToken1; indexForToken1++) {
+		Collections.nCopies( lengthOfToken2 + 1, 0).stream()
+			.forEach(zeroValue -> distances.add(zeroValue));
+		
+		for (int indexForToken1 : IntStream.range(1, lengthOfToken1 + 1).toArray()) {
 
 			int previousItterationDistanceValue = indexForToken1 - 1;
 			int min = previousItterationDistanceValue;
 			
-			distances.add(0, indexForToken1);
+			distances.set(0, indexForToken1);
 			
-			for (int indexForToken2 = 1; indexForToken2 <= lengthOfToken2; indexForToken2++) {
+			for (int indexForToken2 : IntStream.range(1, lengthOfToken2 + 1).toArray()) {
 				int action = previousItterationDistanceValue;
 				
 				if(token1.charAt(indexForToken1-1) != token2.charAt(indexForToken2-1)) {
 					action++;
 				}
 				
-				previousItterationDistanceValue = distances.size() > indexForToken2 ? distances.get(indexForToken2) : 0;
-				distances.add(indexForToken2 ,  Collections.min(Arrays.asList(
-														1+previousItterationDistanceValue,
-														1+distances.get(indexForToken2-1),
+				previousItterationDistanceValue =  distances.get(indexForToken2);
+				
+				distances.set(indexForToken2 ,  Collections.min(Arrays.asList(
+														1 + previousItterationDistanceValue,
+														1 + distances.get(indexForToken2-1),
 																action)));
 				
 				if (previousItterationDistanceValue < min) {
 					min = previousItterationDistanceValue;
 				}
 			}
-			if (min > maxDist) {
+			if (min > maxDist) {  
 				return maxDist + 1;
 			}
-		}
-		if (distances.get(lengthOfToken2) > maxDist) {
-			return maxDist + 1;
+			
+			/*for(int val : distances) {
+				System.out.print(val + " ");
+			}
+			System.out.println("");*/
 		}
 		
-		return distances.get(lengthOfToken2);
+		return distances.get(lengthOfToken2) > maxDist ? maxDist + 1 : distances.get(lengthOfToken2);
 	}
 
 }
